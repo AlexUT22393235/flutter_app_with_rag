@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Usamos Provider para la gestión de estado
+import 'package:provider/provider.dart';
 import '../chat/chat_controller.dart';
 import './widgets/message_bubble.dart';
 import './widgets/input_bar.dart';
@@ -16,12 +16,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Función para desplazar la lista hacia abajo
+  // Función para desplazar la lista hacia el FINAL (abajo)
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          0.0, // Cero para el historial invertido (el más reciente está arriba)
+          _scrollController.position.maxScrollExtent, // <--- CAMBIO CLAVE: Ir al final
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -34,17 +34,19 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_textController.text.isNotEmpty) {
       controller.sendMessage(_textController.text);
       _textController.clear();
-      _scrollToBottom();
+      // El scroll se activa al cambiar el estado (notifyListeners)
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Escucha los cambios en el controlador
     final chatController = context.watch<ChatController>();
 
-    // Vuelve a desplazar cada vez que la lista de mensajes cambia (para asegurar que se vea el nuevo mensaje)
+    // Vuelve a desplazar cada vez que la lista de mensajes cambia
     _scrollToBottom();
+
+    // Calculamos el número total de elementos a mostrar
+    int itemCount = chatController.messages.length + (chatController.isTyping ? 1 : 0);
 
     return Scaffold(
       appBar: AppBar(
@@ -57,19 +59,23 @@ class _ChatScreenState extends State<ChatScreen> {
           // 1. Historial de Conversación
           Expanded(
             child: ListView.builder(
-              reverse: true, // Esto hace que el mensaje más reciente aparezca en la parte inferior de la pantalla.
+              // ELIMINAMOS reverse: true <--- CAMBIO CLAVE
               controller: _scrollController,
               padding: const EdgeInsets.only(top: 8.0),
-              itemCount: chatController.messages.length + (chatController.isTyping ? 1 : 0),
+              itemCount: itemCount,
               itemBuilder: (context, index) {
-                // Si el controlador está escribiendo, el primer elemento (index 0) es el indicador
-                if (chatController.isTyping && index == 0) {
+                // Si el controlador está escribiendo, el ÚLTIMO elemento es el indicador
+                if (chatController.isTyping && index == itemCount - 1) { // <--- CAMBIO CLAVE
                   return const TypingIndicator();
                 }
                 
+                // Si hay un TypingIndicator, el índice del mensaje debe ser ajustado
+                if (chatController.isTyping && index >= itemCount - 1) {
+                    return Container(); // No renderizar nada si el índice es para el indicador
+                }
+                
                 // Muestra el mensaje
-                final message = chatController.messages[index - (chatController.isTyping ? 1 : 0)];
-                return MessageBubble(message: message);
+                return MessageBubble(message: chatController.messages[index]);
               },
             ),
           ),
