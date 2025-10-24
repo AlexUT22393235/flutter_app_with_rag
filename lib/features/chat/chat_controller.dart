@@ -54,7 +54,7 @@ class ChatController with ChangeNotifier {
     } catch (e) {
       // 4. Manejo de errores: añadir al FINAL de la lista
       const String friendlyErrorMessage = 
-        "El sistema no está disponible. Por favor, asegúrate de que el servidor FastAPI esté corriendo e inténtalo más tarde.";
+        "El sistema no está disponible. Por favor, inténtelo más tarde.";
 
       final errorMessage = Message(
         content: friendlyErrorMessage,
